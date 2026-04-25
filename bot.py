@@ -430,7 +430,6 @@ async def handle_interaction(callback: types.CallbackQuery):
     # បញ្ជូនទិន្នន័យ (Like/Skip)
     res = await asyncio.to_thread(requests.post, f"{BASE_URL}/interact", json=payload)
     res_data = res.json()
-    
     if action == "like":
         await callback.answer(TEXTS[lang]["like_sent"])
         if res_data.get("is_match"):
@@ -442,9 +441,15 @@ async def handle_interaction(callback: types.CallbackQuery):
             try:
                 await bot.send_message(chat_id=int(to_id), text=TEXTS[lang_b]["match_notif"], reply_markup=kb_for_b)
             except: pass
+        else:
+            # ពេលលួច Like តែម្ខាង
+            try:
+                notify_text = "🔔 <b>ដំណឹងពិសេស!</b>\nមាននរណាម្នាក់ទើបតែលួច <b>Like ❤️</b> Profile របស់អ្នកហើយ!\n\nសូមបន្តចុច <b>🔍 រកគូ (Match)</b> ដើម្បីស្វែងរកថាគាត់ជានរណា! 😉"
+                await bot.send_message(chat_id=int(to_id), text=notify_text, parse_mode="HTML")
+            except:
+                pass
     else:
         await callback.answer(TEXTS[lang]["skip_sent"])
-
     #  ក្បួន LeoMatch: លុបប៊ូតុងចេញពីរូបចាស់ ឱ្យវាក្លាយជារូបធម្មតាអណ្តែតឡើងទៅលើ
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
