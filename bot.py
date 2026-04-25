@@ -34,7 +34,7 @@ TEXTS = {
         "btn_gps": "📍ផ្ញើទីតាំងបច្ចុប្បន្ន (GPS) 📱",
         "loc_found": "✅ចាប់បានទីតាំង៖{}, {}\n\n✍️សូមសរសេរពីចំណូលចិត្ត ឬ ប្រភេទដៃគូ (ឧ. ចូលចិត្តស្តាប់ចម្រៀង/ខ្ពស់/ស្គម...):",
         "ask_photo": "📸 ជិតរួចរាល់ហើយ! សូមផ្ញើរូបថតរបស់អ្នកមួយសន្លឹក:",
-        "loc_err": "❌ មិនអាចចាប់ទីតាំងបានទេ។ សូមវាយឈ្មោះទីក្រុងជាអក្សរវិញ",
+        "loc_err": "❌ មិនអាចចាប់ទីតាំងបានដោយស្វ័យប្រវត្តិតាម GPS ទេ។\n👉 សូមព្យាយាមវាយឈ្មោះ ទីក្រុង របស់អ្នកជាអក្សរវិញ (ឧទាហរណ៍៖ ភ្នំពេញ):",
         "loc_err_map": "❌ រកមិនឃើញទីតាំងនេះលើផែនទីទេ។ សូមវាយឈ្មោះ ទីក្រុង និងប្រទេស ឱ្យបានច្បាស់",
         "reg_success": "🎉 រួចរាល់! គណនីរបស់អ្នកត្រូវបានរក្សាទុកដោយជោគជ័យ!",
         
@@ -228,42 +228,15 @@ async def request_location(message: types.Message, state: FSMContext):
     await message.answer(TEXTS[lang]["ask_location"], reply_markup=kb, parse_mode="Markdown")
     await state.set_state(RegisterState.waiting_for_location)
 
-@dp.message(RegisterState.waiting_for_location, F.location)
-async def handle_location_gps(message: types.Message, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'kh')
-    try:
-        loc = geolocator.reverse(f"{message.location.latitude}, {message.location.longitude}", language='en')
-        addr = loc.raw.get('address', {})
-        city = addr.get('state') or addr.get('city') or addr.get('province') or "Unknown"
-        country = addr.get('country') or "Unknown"
-        city = city.replace("Province", "").replace("City", "").strip()
-        
-        await state.update_data(city=city, country=country)
-        await message.answer(TEXTS[lang]["loc_found"].format(city, country), reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
-        await state.set_state(RegisterState.waiting_for_bio)
-    except:
-        await message.answer(TEXTS[lang]["loc_err"])
-
-@dp.message(RegisterState.waiting_for_location, F.text)
-async def handle_location_typed(message: types.Message, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'kh')
-    try:
-        location = geolocator.geocode(message.text, language='en')
-        if location:
-            city = location.address.split(',')[0].strip()
-            country = location.address.split(',')[-1].strip()
-            await state.update_data(city=city, country=country)
-            await message.answer(TEXTS[lang]["loc_found"].format(city, country), reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
-            await state.set_state(RegisterState.waiting_for_bio)
-        else:
-            await message.answer(TEXTS[lang]["loc_err_map"])
-    except:
-        await message.answer(TEXTS[lang]["loc_err_map"])
-
 @dp.message(RegisterState.waiting_for_bio)
 async def set_bio(message: types.Message, state: FSMContext):
+    if not message.text:
+        return 
+        
     await state.update_data(bio=message.text)
-    lang = (await state.get_data()).get('lang', 'kh')
+    data = await state.get_data()
+    lang = data.get('lang', 'kh')
+    
     await message.answer(TEXTS[lang]["ask_photo"])
     await state.set_state(RegisterState.waiting_for_photo)
 
@@ -273,18 +246,25 @@ async def set_photo(message: types.Message, state: FSMContext):
     lang = data.get('lang', 'kh')
     
     payload = {
-        "tg_id": message.from_user.id, "full_name": data['full_name'],
-        "age": data['age'], "gender": data['gender'],
-        "looking_for": data['looking_for'], "city": data['city'],
-        "country": data['country'], "lang": lang, 
+        "tg_id": message.from_user.id,
+        "full_name": data['full_name'],
+        "age": data['age'],
+        "gender": data['gender'],
+        "looking_for": data['looking_for'],
+        "city": data['city'],
+        "country": data['country'],
+        "lang": lang, 
         "photo_url": message.photo[-1].file_id,
         "bio": data.get('bio', ''),
         "referred_by": data.get('referred_by')
     }
     
-    await asyncio.to_thread(requests.post, f"{BASE_URL}/register", json=payload)
-    await message.answer(TEXTS[lang]["reg_success"], reply_markup=get_main_menu(lang))
-    await state.clear()
+    try:
+        await asyncio.to_thread(requests.post, f"{BASE_URL}/register", json=payload)
+        await message.answer(TEXTS[lang]["reg_success"], reply_markup=get_main_menu(lang))
+        await state.clear()
+    except:
+        await message.answer("❌ Error: មិនអាចចុះឈ្មោះបានទេ សូមសាកល្បងម្ដងទៀត!")
 
 @dp.message(F.text.in_([TEXTS["kh"]["btn_lang"], TEXTS["en"]["btn_lang"]]))
 async def show_language_options(message: types.Message):
@@ -338,7 +318,6 @@ async def set_pref_specific(callback: types.CallbackQuery, state: FSMContext):
 async def handle_location_gps(message: types.Message, state: FSMContext):
     lang = (await state.get_data()).get('lang', 'kh')
     try:
-        # ព្យាយាមចាប់ទីតាំងតាមរយៈ GPS
         loc = await asyncio.to_thread(geolocator.reverse, f"{message.location.latitude}, {message.location.longitude}", language='en', timeout=5)
         
         if loc and loc.raw.get('address'):
@@ -351,18 +330,14 @@ async def handle_location_gps(message: types.Message, state: FSMContext):
             await message.answer(TEXTS[lang]["loc_found"].format(city, country), reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
             await state.set_state(RegisterState.waiting_for_bio)
         else:
-            # បើចាប់ GPS បាន តែផែនទីរកអាសយដ្ឋានមិនឃើញ
             await message.answer(TEXTS[lang]["loc_err"])
     except:
-        # បើប្រព័ន្ធផែនទីគាំង ឬត្រូវគេ Block (ករណីដែលមិត្តប្អូនជួប)
-        # យើងឱ្យគាត់វាយឈ្មោះទីក្រុងវិញ ដើម្បីកុំឱ្យទាល់ផ្លូវ
         await message.answer(TEXTS[lang]["loc_err"])
 
 @dp.message(RegisterState.waiting_for_location, F.text)
 async def handle_location_typed(message: types.Message, state: FSMContext):
     lang = (await state.get_data()).get('lang', 'kh')
     try:
-        # ព្យាយាមឆែកពាក្យដែលគាត់វាយ
         location = await asyncio.to_thread(geolocator.geocode, message.text, language='en', timeout=5)
         if location:
             city = location.address.split(',')[0].strip()
@@ -371,13 +346,11 @@ async def handle_location_typed(message: types.Message, state: FSMContext):
             await message.answer(TEXTS[lang]["loc_found"].format(city, country), reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
             await state.set_state(RegisterState.waiting_for_bio)
         else:
-            # បើរកមិនឃើញក្នុងផែនទី យើងយកពាក្យគាត់វាយផ្ទាល់តែម្តង (ដើម្បីកុំឱ្យ Error)
             city = message.text.strip()
             await state.update_data(city=city, country="Cambodia")
             await message.answer(TEXTS[lang]["loc_found"].format(city, "Cambodia"), reply_markup=types.ReplyKeyboardRemove())
             await state.set_state(RegisterState.waiting_for_bio)
     except:
-        # បើគាំងប្រព័ន្ធផែនទី យកពាក្យគាត់វាយធ្វើជាទីតាំងតែម្តង
         city = message.text.strip()
         await state.update_data(city=city, country="Cambodia")
         await message.answer(TEXTS[lang]["loc_found"].format(city, "Cambodia"), reply_markup=types.ReplyKeyboardRemove())
@@ -490,7 +463,7 @@ async def handle_interaction(callback: types.CallbackQuery):
     await show_next_match(callback.message.chat.id, callback.from_user.id)
 
 async def main():
-    print("--- 🚀 KOU Bot Is Running (V4.1 LeoMatch Scroll Effect & Notification) ---")
+    print("--- 🚀 KOU Bot Is Running (V4.2 Location Safe & Notification) ---")
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
