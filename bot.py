@@ -47,7 +47,7 @@ TEXTS = {
         "btn_edit": "✏️ កែប្រែគណនី",
         "btn_delete": "🗑️ លុបគណនី",
         "btn_invite": "🎁 ណែនាំមិត្ត (Invite)",
-        "invite_text": "🎁 អញ្ជើញមិត្តភក្តិរបស់អ្នក!\n\nចំណុចដែលអ្នករកបាន: {} នាក់\n\nនេះគឺជា Link របស់អ្នក:\n👉 `https://t.me/{}?start=ref_{}`\n\nផ្ញើ Link នេះទៅមិត្តភក្តិ ឬ Share លើ Social Media ដើម្បីអញ្ជើញពួកគេចូលរួម ដើម្បីទទួលបានរង្វាន់🎁!",
+        "invite_text": "🎁 អញ្ជើញមិត្តភក្តិរបស់អ្នក!\n\nចំនួនដែលអ្នកបានចែករំលែក: {} នាក់\n\nនេះគឺជា Link របស់អ្នក:\n👉 `https://t.me/{}?start=ref_{}`\n\nផ្ញើ Link នេះទៅមិត្តភក្តិ ឬ Share លើ Social Media ដើម្បីអញ្ជើញពួកគេចូលរួម ដើម្បីទទួលបានរង្វាន់🎁!",
         
         "no_profile": "រកមិនឃើញគណនីទេ។ សូមវាយ /start ដើម្បីចុះឈ្មោះ។",
         "del_success": "🗑️ គណនីរបស់អ្នកត្រូវបានលុបដោយជោគជ័យចេញពីប្រព័ន្ធ។\nវាយ /start ដើម្បីចុះឈ្មោះម្តងទៀត។",
@@ -104,7 +104,7 @@ TEXTS = {
         "btn_edit": "✏️ Edit Profile",
         "btn_delete": "🗑️ Delete Account",
         "btn_invite": "🎁 Invite Friends",
-        "invite_text": "🎁 **Invite your friends!**\n\nTotal Invites: **{} users**\n\nHere is your unique referral link:\n👉 `https://t.me/{}?start=ref_{}`\n\nShare this link to invite your friends to KOU! and get rewards!🎁",
+        "invite_text": "🎁 Invite your friends!\n\nTotal Invites: {} users\n\nHere is your unique referral link:\n👉 `https://t.me/{}?start=ref_{}`\n\nShare this link to invite your friends to KOU! and get rewards!🎁",
         
         "no_profile": "Profile not found. Send /start to register.",
         "del_success": "🗑️ Account deleted successfully.\nSend /start to register again.",
