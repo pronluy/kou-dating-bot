@@ -334,21 +334,54 @@ async def set_pref_specific(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(TEXTS[lang]["pref_ask_spec"])
     await state.set_state(RegisterState.waiting_for_specific_pref)
 
-@dp.message(RegisterState.waiting_for_specific_pref)
-async def process_specific_preference(message: types.Message, state: FSMContext):
-    lang = get_user_lang(message.from_user.id)
+@dp.message(RegisterState.waiting_for_location, F.location)
+async def handle_location_gps(message: types.Message, state: FSMContext):
+    lang = (await state.get_data()).get('lang', 'kh')
     try:
-        location = geolocator.geocode(message.text, language='en')
+        # ព្យាយាមចាប់ទីតាំងតាមរយៈ GPS
+        loc = await asyncio.to_thread(geolocator.reverse, f"{message.location.latitude}, {message.location.longitude}", language='en', timeout=5)
+        
+        if loc and loc.raw.get('address'):
+            addr = loc.raw.get('address', {})
+            city = addr.get('state') or addr.get('city') or addr.get('province') or "Unknown"
+            country = addr.get('country') or "Cambodia"
+            city = city.replace("Province", "").replace("City", "").strip()
+            
+            await state.update_data(city=city, country=country)
+            await message.answer(TEXTS[lang]["loc_found"].format(city, country), reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
+            await state.set_state(RegisterState.waiting_for_bio)
+        else:
+            # បើចាប់ GPS បាន តែផែនទីរកអាសយដ្ឋានមិនឃើញ
+            await message.answer(TEXTS[lang]["loc_err"])
+    except:
+        # បើប្រព័ន្ធផែនទីគាំង ឬត្រូវគេ Block (ករណីដែលមិត្តប្អូនជួប)
+        # យើងឱ្យគាត់វាយឈ្មោះទីក្រុងវិញ ដើម្បីកុំឱ្យទាល់ផ្លូវ
+        await message.answer(TEXTS[lang]["loc_err"])
+
+@dp.message(RegisterState.waiting_for_location, F.text)
+async def handle_location_typed(message: types.Message, state: FSMContext):
+    lang = (await state.get_data()).get('lang', 'kh')
+    try:
+        # ព្យាយាមឆែកពាក្យដែលគាត់វាយ
+        location = await asyncio.to_thread(geolocator.geocode, message.text, language='en', timeout=5)
         if location:
             city = location.address.split(',')[0].strip()
-            payload = {"tg_id": message.from_user.id, "preference": "specific", "search_city": city}
-            await asyncio.to_thread(requests.post, f"{BASE_URL}/preference", json=payload)
-            await message.answer(TEXTS[lang]["pref_spec_set"].format(city), parse_mode="Markdown")
-            await state.clear()
+            country = location.address.split(',')[-1].strip()
+            await state.update_data(city=city, country=country)
+            await message.answer(TEXTS[lang]["loc_found"].format(city, country), reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
+            await state.set_state(RegisterState.waiting_for_bio)
         else:
-            await message.answer(TEXTS[lang]["loc_err_map"])
+            # បើរកមិនឃើញក្នុងផែនទី យើងយកពាក្យគាត់វាយផ្ទាល់តែម្តង (ដើម្បីកុំឱ្យ Error)
+            city = message.text.strip()
+            await state.update_data(city=city, country="Cambodia")
+            await message.answer(TEXTS[lang]["loc_found"].format(city, "Cambodia"), reply_markup=types.ReplyKeyboardRemove())
+            await state.set_state(RegisterState.waiting_for_bio)
     except:
-        await message.answer(TEXTS[lang]["loc_err_map"])
+        # បើគាំងប្រព័ន្ធផែនទី យកពាក្យគាត់វាយធ្វើជាទីតាំងតែម្តង
+        city = message.text.strip()
+        await state.update_data(city=city, country="Cambodia")
+        await message.answer(TEXTS[lang]["loc_found"].format(city, "Cambodia"), reply_markup=types.ReplyKeyboardRemove())
+        await state.set_state(RegisterState.waiting_for_bio)
 
 @dp.message(F.text.in_([TEXTS["kh"]["btn_profile"], TEXTS["en"]["btn_profile"]]))
 async def show_profile(message: types.Message):
