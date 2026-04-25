@@ -38,6 +38,8 @@ class LangUpdate(BaseModel):
 def get_db_conn():
     return psycopg2.connect(DATABASE_URL)
 
+#  @app.head("/")
+@app.head("/")
 @app.get("/")
 def home():
     return {"message": "KOU Dating API is Running"}
