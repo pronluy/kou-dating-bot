@@ -7,13 +7,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from geopy.geocoders import Nominatim
+import os
 
 API_TOKEN = '8675039854:AAE_anpP2Z-MPxxQbW0NRRXlr6RnAzpuja8'
-import os
 PORT = os.environ.get("PORT", 8000)
 BASE_URL = f"http://127.0.0.1:{PORT}"
 BOT_USERNAME = "KouMatch_bot"
-geolocator = Nominatim(user_agent="kou_dating_app")
+
 geolocator = Nominatim(user_agent="kou_dating_app")
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
@@ -57,7 +57,7 @@ TEXTS = {
         "match_title": "✨ ពេញចិត្តទេ?\n👤 ឈ្មោះ: {}\n🎂 អាយុ: {}\n📍 ទីក្រុង: {}, {}\n📝 Bio: {}",
         "btn_like": "❤️ Like",
         "btn_skip": "⏭️ Skip",
-        "no_match": "ស្វែងរកអស់ហើយ! ពេលនេះមិនទាន់មានគូថ្មីនៅក្នុងតំបន់របស់អ្នកទេ។ 🥺\n💡 គន្លឹះ៖ សូមចុចប៊ូតុង [⚙️ កំណត់ទីតាំងស្វែងរក] នៅខាងក្រោម ដើម្បីប្តូរទៅជា 'គ្រប់ទីកន្លែង' វិញ! ដើម្បីស្វែងរកអ្នកនៅតំបន់ផ្សេងៗទៀត!",
+        "no_match": "ស្វែងរកអស់ហើយ! ពេលនេះមិនទាន់មានគូថ្មីនៅក្នុងតំបន់របស់អ្នកទេ។ 🥺\n💡 គន្លឹះ៖ សូមចុចប៊ូតុង [⚙️ កំណត់ទីតាំងស្វែងរក] នៅខាងក្រោម ដើម្បីប្តូរទៅជា (គ្រប់ទីកន្លែង) វិញ! ដើម្បីស្វែងរកអ្នកនៅតំបន់ផ្សេងៗទៀត!",
         "req_acc": "❌ អ្នកត្រូវមានគណនីសិន ទើបអាច Match បាន។",
         "like_sent": "💖 ផ្ញើក្តីស្រឡាញ់ជោគជ័យ!",
         "skip_sent": "⏭️ រំលង...",
@@ -76,7 +76,8 @@ TEXTS = {
         "pref_spec_set": "✅ បានកំណត់! ប្រព័ន្ធនឹងស្វែងរកតែអ្នកដែលនៅ {} ប៉ុណ្ណោះ។",
         
         "ask_lang": "🌐 សូមជ្រើសរើសភាសារបស់អ្នក:",
-        "lang_set": "✅ ភាសាត្រូវបានប្តូរទៅជា ខ្មែរ ដោយជោគជ័យ!"
+        "lang_set": "✅ ភាសាត្រូវបានប្តូរទៅជា ខ្មែរ ដោយជោគជ័យ!",
+        "got_liked": "🔔 <b>ដំណឹងពិសេស!</b>\nមាននរណាម្នាក់ទើបតែលួច <b>Like ❤️</b> Profile របស់អ្នកហើយ!\n\nសូមបន្តចុច <b>🔍 រកគូ (Match)</b> ដើម្បីស្វែងរកថាគាត់ជានរណា! 😉"
     },
     "en": {
         "welcome": "Welcome to KOU!\nPlease select your language:",
@@ -114,7 +115,7 @@ TEXTS = {
         "match_title": "✨ Like what you see?\n👤 Name: {}\n🎂 Age: {}\n📍 City: {}, {}\n📝 Bio: {}",
         "btn_like": "❤️ Like",
         "btn_skip": "⏭️ Skip",
-        "no_match": "No more profiles found in your area right now! 🥺\n💡 Tip: Tap on [⚙️ Search Preferences] below and switch to 'Global' to discover more people!",
+        "no_match": "No more profiles found in your area right now! 🥺\n💡 Tip: Tap on [⚙️ Search Preferences] below and switch to (Global) to discover more people!",
         "req_acc": "❌ You need an account to match.",
         "like_sent": "💖 Like sent!",
         "skip_sent": "⏭️ Skipped...",
@@ -133,7 +134,8 @@ TEXTS = {
         "pref_spec_set": "✅ Set! Searching only in {}.",
         
         "ask_lang": "🌐 Please select your language:",
-        "lang_set": "✅ Language successfully changed to **English**!"
+        "lang_set": "✅ Language successfully changed to **English**!",
+        "got_liked": "🔔 <b>Special Notification!</b>\nSomeone just <b>Liked ❤️</b> your profile!\n\nKeep tapping <b>🔍 Match</b> to find out who! 😉"
     }
 }
 
@@ -152,7 +154,7 @@ class RegisterState(StatesGroup):
     waiting_for_gender = State()
     waiting_for_looking_for = State()
     waiting_for_location = State()
-    waiting_for_bio = State() # State ថ្មីសម្រាប់ Bio
+    waiting_for_bio = State() 
     waiting_for_photo = State()
     waiting_for_specific_pref = State() 
 
@@ -238,7 +240,7 @@ async def handle_location_gps(message: types.Message, state: FSMContext):
         
         await state.update_data(city=city, country=country)
         await message.answer(TEXTS[lang]["loc_found"].format(city, country), reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
-        await state.set_state(RegisterState.waiting_for_bio) # លោតទៅសួរ Bio
+        await state.set_state(RegisterState.waiting_for_bio)
     except:
         await message.answer(TEXTS[lang]["loc_err"])
 
@@ -252,7 +254,7 @@ async def handle_location_typed(message: types.Message, state: FSMContext):
             country = location.address.split(',')[-1].strip()
             await state.update_data(city=city, country=country)
             await message.answer(TEXTS[lang]["loc_found"].format(city, country), reply_markup=types.ReplyKeyboardRemove(), parse_mode="Markdown")
-            await state.set_state(RegisterState.waiting_for_bio) # លោតទៅសួរ Bio
+            await state.set_state(RegisterState.waiting_for_bio)
         else:
             await message.answer(TEXTS[lang]["loc_err_map"])
     except:
@@ -276,15 +278,13 @@ async def set_photo(message: types.Message, state: FSMContext):
         "looking_for": data['looking_for'], "city": data['city'],
         "country": data['country'], "lang": lang, 
         "photo_url": message.photo[-1].file_id,
-        "bio": data.get('bio', ''), # ភ្ជាប់ Bio ទៅ Database
+        "bio": data.get('bio', ''),
         "referred_by": data.get('referred_by')
     }
     
     await asyncio.to_thread(requests.post, f"{BASE_URL}/register", json=payload)
     await message.answer(TEXTS[lang]["reg_success"], reply_markup=get_main_menu(lang))
     await state.clear()
-
-#  LANGUAGE /  PREFERENCES /  PROFILE /  MATCH
 
 @dp.message(F.text.in_([TEXTS["kh"]["btn_lang"], TEXTS["en"]["btn_lang"]]))
 async def show_language_options(message: types.Message):
@@ -396,7 +396,6 @@ async def handle_delete(callback: types.CallbackQuery):
     else:
         await callback.answer(TEXTS[lang]["del_fail"], show_alert=True)
 
-#  មុខងារ LeoMatch Scroll-Up Effect 
 async def show_next_match(chat_id, user_id):
     lang = get_user_lang(user_id)
     res = await asyncio.to_thread(requests.get, f"{BASE_URL}/match/{user_id}")
@@ -410,7 +409,6 @@ async def show_next_match(chat_id, user_id):
                 InlineKeyboardButton(text=TEXTS[lang]["btn_like"], callback_data=f"like_{m['telegram_id']}"), 
                 InlineKeyboardButton(text=TEXTS[lang]["btn_skip"], callback_data=f"skip_{m['telegram_id']}")
             ]])
-            # ទម្លាក់សារថ្មីរហូត មិន Edit ពីលើសារចាស់ទេ
             await bot.send_photo(chat_id=chat_id, photo=m['photo_url'], caption=cap, reply_markup=kb)
         else:
             await bot.send_message(chat_id=chat_id, text=TEXTS[lang]["no_match"])
@@ -427,9 +425,9 @@ async def handle_interaction(callback: types.CallbackQuery):
     action, to_id = callback.data.split("_")
     payload = {"from_id": callback.from_user.id, "to_id": int(to_id), "action": action}
     
-    # បញ្ជូនទិន្នន័យ (Like/Skip)
     res = await asyncio.to_thread(requests.post, f"{BASE_URL}/interact", json=payload)
     res_data = res.json()
+    
     if action == "like":
         await callback.answer(TEXTS[lang]["like_sent"])
         if res_data.get("is_match"):
@@ -442,25 +440,24 @@ async def handle_interaction(callback: types.CallbackQuery):
                 await bot.send_message(chat_id=int(to_id), text=TEXTS[lang_b]["match_notif"], reply_markup=kb_for_b)
             except: pass
         else:
-            # ពេលលួច Like តែម្ខាង
             try:
-                notify_text = "🔔 <b>ដំណឹងពិសេស!</b>\nមាននរណាម្នាក់ទើបតែលួច <b>Like ❤️</b> Profile របស់អ្នកហើយ!\n\nសូមបន្តចុច <b>🔍 រកគូ (Match)</b> ដើម្បីស្វែងរកថាគាត់ជានរណា! 😉"
+                lang_b = get_user_lang(to_id)
+                notify_text = TEXTS[lang_b]["got_liked"]
                 await bot.send_message(chat_id=int(to_id), text=notify_text, parse_mode="HTML")
             except:
                 pass
     else:
         await callback.answer(TEXTS[lang]["skip_sent"])
-    #  ក្បួន LeoMatch: លុបប៊ូតុងចេញពីរូបចាស់ ឱ្យវាក្លាយជារូបធម្មតាអណ្តែតឡើងទៅលើ
+        
     try:
         await callback.message.edit_reply_markup(reply_markup=None)
     except:
         pass
 
-    # ទម្លាក់រូបថ្មីបន្តបន្ទាប់
     await show_next_match(callback.message.chat.id, callback.from_user.id)
 
 async def main():
-    print("--- 🚀 KOU Bot Is Running (V4.0 LeoMatch Scroll Effect & Bio) ---")
+    print("--- 🚀 KOU Bot Is Running (V4.1 LeoMatch Scroll Effect & Notification) ---")
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
